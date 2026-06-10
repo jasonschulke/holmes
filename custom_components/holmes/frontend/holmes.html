@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Holmes</title>
+<style>
+  :root{
+    --zigbee:#c08526; --zwave:#7a64e0; --wifi:#2f97bd; --matter:#3da06c;
+    --mqtt:#c25577; --thread:#2f9c86; --cloud:#7f8aa3; --other:#8a8f99;
+    --svc:#b9bdc6; --manual:#5b8def;
+    --bad:#cf5544; --ok:#3da06c; --warn:#c08526;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  [data-theme="light"]{
+    --ink:#f5f4f0; --panel:#ffffff; --panel2:#eeede8; --line:#e0ded6;
+    --text:#23262b; --dim:#6b7078; --faint:#9aa0a8; --shadow:0 1px 2px rgba(20,23,29,.05);
+  }
+  [data-theme="dark"]{
+    --ink:#14171d; --panel:#1c2027; --panel2:#22272f; --line:#2a2f38;
+    --text:#e8e6df; --dim:#8b91a0; --faint:#5c6270; --shadow:none;
+    --zigbee:#e2a33c; --zwave:#8d7ae8; --wifi:#4fb6d8; --matter:#5fbf85;
+    --mqtt:#d4708e; --thread:#49b8a0; --svc:#454b57; --manual:#6f9ef0;
+    --bad:#e06a5a; --ok:#5fbf85; --warn:#e2a33c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--ink);color:var(--text);font:14px/1.45 var(--sans)}
+  button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+  input,select,textarea{font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px;outline:none}
+  input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--wifi);outline-offset:1px}
+  svg.i{width:15px;height:15px;fill:currentColor;flex:0 0 auto;vertical-align:-2px}
+
+  #app{display:none;height:100%;grid-template-columns:1fr;grid-template-rows:54px 45px 1fr}
+  header{display:flex;align-items:center;gap:14px;padding:0 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+  .brand{font:600 13px var(--mono);letter-spacing:.18em;text-transform:uppercase}
+  .brand em{color:var(--dim);font-style:normal}
+  #search{flex:1;max-width:440px;background:var(--ink)}
+  #hbtns{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .hbtn{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:7px;padding:6px 11px;font-size:12.5px;color:var(--dim)}
+  .hbtn:hover{color:var(--text);border-color:var(--faint)}
+  #conn{font:11px var(--mono);color:var(--dim)} #conn b{color:var(--ok)}
+  nav{border-bottom:1px solid var(--line);padding:0 16px;display:flex;flex-direction:row;align-items:stretch;gap:2px;background:var(--panel)}
+  nav button{display:flex;align-items:center;gap:8px;padding:0 15px;border-radius:0;border-bottom:2px solid transparent;color:var(--dim);font-weight:500}
+  nav button.on{border-bottom-color:var(--text);background:none}
+  nav button:hover{color:var(--text)}
+  nav button.on{color:var(--text)}
+  nav .n{font:11px var(--mono);color:var(--faint)}
+  main{overflow:auto;padding:20px 22px 60px}
+  .eyebrow{display:flex;align-items:center;gap:7px;font:600 10px var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+
+  #specbar{display:flex;height:34px;border-radius:8px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow)}
+  #specbar .seg{min-width:3px;transition:width .6s ease;cursor:pointer}
+  #specbar .seg:hover{filter:brightness(1.12)}
+  .keygrp .gt{font:600 10px var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin:9px 0 5px}
+  .keys{display:flex;flex-wrap:wrap;gap:6px 14px}
+  .k{display:flex;align-items:center;gap:6px;font:11.5px var(--mono);color:var(--dim);cursor:pointer}
+  .k:hover{color:var(--text)} .k b{color:var(--text)}
+  .dot{width:8px;height:8px;border-radius:2px;flex:0 0 auto}
+
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:20px 0 22px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 15px;box-shadow:var(--shadow)}
+  .tile .v{font:600 32px/1.1 var(--mono)}
+  .tile .l{font-size:11.5px;color:var(--dim);margin-top:3px}
+  .tile.bad .v{color:var(--bad)} .tile.warn .v{color:var(--warn)} .tile.ok .v{color:var(--ok)}
+  .tile.click{cursor:pointer} .tile.click:hover{border-color:var(--faint)}
+
+  .areagrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:9px;margin-bottom:18px}
+  .acard{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:11px 13px;cursor:pointer;box-shadow:var(--shadow)}
+  .acard:hover{border-color:var(--faint)}
+  .acard .an{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .acard .ac{font:600 20px/1.2 var(--mono);margin-top:2px}
+  .acard .ad{font:10.5px var(--mono);color:var(--bad)}
+  .acard.ghost .an,.acard.ghost .ac{color:var(--faint)}
+
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:14px 16px;box-shadow:var(--shadow)}
+  .card h3{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--dim);margin-bottom:10px}
+  .mchips{display:flex;flex-wrap:wrap;gap:6px}
+  .feed .ev{display:flex;gap:9px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px;align-items:baseline}
+  .feed .ev:last-child{border-bottom:0}
+  .feed .tm{font:10.5px var(--mono);color:var(--faint);min-width:52px}
+  .feed .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .feed .st{font:11px var(--mono);white-space:nowrap}
+
+  .toolrow{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;align-items:center}
+  .chip{display:flex;align-items:center;gap:6px;padding:5px 11px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--dim);background:var(--panel)}
+  .chip:hover{color:var(--text)}
+  .chip.on{background:var(--panel2);color:var(--text);border-color:var(--faint)}
+  .spacer{flex:1}
+  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  th{font:600 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
+  th:hover{color:var(--dim)} th .arr{font-size:9px}
+  td{padding:8px 10px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+  tr:last-child td{border-bottom:0}
+  tr.row{cursor:pointer} tr.row:hover td{background:var(--panel2)}
+  .mono{font:12px var(--mono);color:var(--dim)}
+  .badge{display:inline-flex;align-items:center;gap:6px;font:11px var(--mono);padding:3px 9px;border-radius:999px;background:var(--panel2);white-space:nowrap}
+  .stat-on{color:var(--ok)} .stat-off{color:var(--faint)} .stat-bad{color:var(--bad)}
+  .empty{color:var(--faint);padding:30px 10px;text-align:center;font-size:13px}
+  .cpy{color:var(--faint);padding:2px 4px;border-radius:4px;opacity:.55}
+  .cpy:hover{opacity:1;color:var(--text);background:var(--panel2)}
+  td .cpy{visibility:hidden} tr:hover td .cpy{visibility:visible}
+
+  /* health charts */
+  .donutwrap{display:flex;gap:18px;align-items:center}
+  .dleg{font-size:12.5px;display:flex;flex-direction:column;gap:5px}
+  .dleg .k{cursor:default}
+  .bbar{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px}
+  .bbar .nm{flex:0 0 44%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bbar .tr{flex:1;height:8px;background:var(--panel2);border-radius:4px;overflow:hidden}
+  .bbar .fl{height:100%;border-radius:4px}
+  .bbar .ct{font:11px var(--mono);color:var(--dim);min-width:34px;text-align:right}
+
+  /* attention */
+  .attn{border:1px solid var(--bad);border-radius:9px;background:var(--panel);box-shadow:var(--shadow);padding:12px 16px;margin:16px 0 4px}
+  .attn h3{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:650;color:var(--bad);margin-bottom:8px}
+  .arow{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:13px;cursor:pointer;border-bottom:1px solid var(--line)}
+  .arow:last-child{border-bottom:0}
+  .arow:hover{color:var(--text)}
+  .arow .sev{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .arow .why{font:11px var(--mono);color:var(--faint);margin-left:auto;white-space:nowrap}
+  /* network */
+  .spark{width:100%;height:auto;display:block}
+  .netbig .v{font:600 34px/1.05 var(--mono)} .netbig .u{font:12px var(--mono);color:var(--dim)}
+  /* map */
+  main.mapmode{display:flex;flex-direction:column;overflow:hidden;padding-bottom:16px}
+  main.mapmode .toolrow{flex:0 0 auto}
+  #mapwrap{background:var(--panel);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);overflow:hidden;position:relative;flex:1;min-height:0}
+  #mapsvg{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+  #mzoom{transform-origin:0 0}
+  #mapsvg .nd,#mapsvg .edge{transition:opacity .25s}
+  #mapsvg .dim{opacity:.1;pointer-events:none}
+  #mapsvg:active{cursor:grabbing}
+  #mapsvg .edge{stroke:var(--line);fill:none;stroke-width:1.1}
+  #mapsvg .nd{cursor:pointer}
+  #mapsvg .nd text{font:10.5px var(--mono);fill:var(--dim)}
+  #mapsvg .nd:hover text{fill:var(--text)}
+  #mapsvg .inode text{font:600 11px var(--sans);fill:var(--text)}
+  #mapsvg .rl{font:600 12px var(--mono);letter-spacing:.1em}
+  #mapsvg .ll{paint-order:stroke;stroke:var(--panel);stroke-width:3px}
+  #mapsvg .cnt{font:9px var(--mono);fill:var(--faint)}
+  #ovl{position:fixed;inset:0;background:rgba(8,10,14,.45);display:none;z-index:4}
+  #drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,94vw);background:var(--panel);border-left:1px solid var(--line);transform:translateX(102%);transition:transform .28s ease;display:flex;flex-direction:column;z-index:5}
+  #drawer.open{transform:none}
+  #drawer .hd{padding:18px 20px 14px;border-bottom:1px solid var(--line)}
+  #drawer .hd h2{font-size:17px;font-weight:650;display:flex;align-items:center;gap:8px}
+  #drawer .hd .sub{color:var(--dim);font-size:12.5px;margin-top:3px}
+  #drawer .bd{overflow:auto;padding:16px 20px;flex:1}
+  #drawer .ft{padding:12px 20px;border-top:1px solid var(--line);display:flex;gap:8px}
+  .meta{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;font-size:12.5px;margin-bottom:18px}
+  .meta dt{color:var(--faint)}
+  .meta dd{font-family:var(--mono);font-size:12px;word-break:break-all;display:flex;align-items:center;gap:5px}
+  .ent{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+  .ent .id{color:var(--faint);font:11px var(--mono)}
+  .ent .st{font:12px var(--mono);white-space:nowrap}
+  #xd{position:absolute;top:14px;right:14px;color:var(--dim);padding:4px 8px}
+
+  #modal{position:fixed;inset:0;background:rgba(8,10,14,.45);display:none;align-items:center;justify-content:center;z-index:6;padding:18px}
+  #modal .mbox{width:430px;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;max-height:92vh;overflow:auto}
+  #modal h2{font-size:15px;font-weight:650;margin-bottom:14px}
+  .frow{margin-bottom:10px}
+  .frow label{display:block;font-size:11.5px;color:var(--dim);margin-bottom:4px}
+  .frow input,.frow select,.frow textarea{width:100%}
+  .f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mbtns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+  .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:7px;padding:8px 14px;font-size:13px;text-decoration:none;color:var(--text)}
+  .btn.pri{background:var(--text);color:var(--ink);border-color:var(--text);font-weight:600}
+  .btn.danger{color:var(--bad);border-color:var(--bad)}
+
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(60px);background:var(--text);color:var(--ink);font-size:12.5px;font-weight:600;padding:8px 16px;border-radius:999px;transition:transform .25s ease;z-index:9}
+  #toast.show{transform:translateX(-50%)}
+
+  #login{height:100%;display:flex;align-items:center;justify-content:center;padding:20px}
+  #login .box{width:380px;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px;box-shadow:var(--shadow)}
+  #login h1{font:600 13px var(--mono);letter-spacing:.2em;text-transform:uppercase;margin-bottom:4px}
+  #login p{color:var(--dim);font-size:12.5px;margin-bottom:16px}
+  #login label{display:block;font-size:12px;color:var(--dim);margin:12px 0 5px}
+  #login input{width:100%;background:var(--ink)}
+  #go{width:100%;margin-top:18px;background:var(--text);color:var(--ink);font-weight:600;padding:10px;border-radius:7px}
+  #lerr{color:var(--bad);font-size:12.5px;margin-top:12px;display:none}
+
+  @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+  @media (max-width:760px){
+    nav{overflow-x:auto}
+    nav .n{display:none}
+    #search{max-width:none}
+  }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="box">
+    <h1>Holmes</h1>
+    <p>Connects to your Home Assistant and reads the device &amp; entity registries. Nothing leaves your network.</p>
+    <label for="li-url">Home Assistant URL</label>
+    <input id="li-url" placeholder="http://homeassistant.local:8123">
+    <label for="li-tok">Long-lived access token</label>
+    <input id="li-tok" type="password" placeholder="paste token">
+    <button id="go">Connect</button>
+    <div id="lerr"></div>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <div class="brand">HOL<em>MES</em></div>
+    <input id="search" placeholder="Search devices, models, MACs, IPs…">
+    <div id="hbtns">
+      <button class="hbtn" id="themeT" title="Toggle theme"></button>
+      <div id="conn">● <b>live</b> <span id="connhost"></span></div>
+    </div>
+  </header>
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+
+<div id="ovl"></div>
+<aside id="drawer" aria-label="Device detail">
+  <button id="xd" aria-label="Close"></button>
+  <div class="hd"><h2 id="d-name"></h2><div class="sub" id="d-sub"></div></div>
+  <div class="bd" id="d-body"></div>
+  <div class="ft" id="d-foot"></div>
+</aside>
+
+<div id="modal"><div class="mbox">
+  <h2 id="m-title">Add device</h2>
+  <div class="frow"><label>Name *</label><input id="m-name" placeholder="Mac mini"></div>
+  <div class="f2">
+    <div class="frow"><label>Category</label><select id="m-cat">
+      <option value="compute">Computing & media</option>
+      <option value="smart">Smart home</option>
+    </select></div>
+    <div class="frow"><label>Area</label><input id="m-area" placeholder="Office"></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label>Manufacturer</label><input id="m-mfr" placeholder="Apple"></div>
+    <div class="frow"><label>Model</label><input id="m-model" placeholder="Mac mini M4"></div>
+  </div>
+  <div class="f2">
+    <div class="frow"><label>OS</label><input id="m-os" placeholder="macOS 16"></div>
+    <div class="frow"><label>IP</label><input id="m-ip" placeholder="192.168.1.x"></div>
+  </div>
+  <div class="frow"><label>MAC</label><input id="m-mac" placeholder="aa:bb:cc:dd:ee:ff"></div>
+  <div class="frow"><label>Notes</label><textarea id="m-notes" rows="2"></textarea></div>
+  <div class="mbtns">
+    <button class="btn" id="m-cancel">Cancel</button>
+    <button class="btn pri" id="m-save">Save device</button>
+  </div>
+</div></div>
+
+<div id="toast">Copied</div>
+
+<script>
+"use strict";
+/* ---------- inline MDI icons ---------- */
+const MDI = {
+  dash:"M13,3V9H21V3M13,21H21V11H13M3,21H11V15H3M3,13H11V3H3V13Z",
+  chip:"M17,17H7V7H17M21,11V9H19V7C19,5.89 18.1,5 17,5H15V3H13V5H11V3H9V5H7C5.89,5 5,5.89 5,7V9H3V11H5V13H3V15H5V17C5,18.1 5.89,19 7,19H9V21H11V19H13V21H15V19H17A2,2 0 0,0 19,17V15H21V13H19V11M13,13H11V11H13M15,9H9V15H15V9Z",
+  pulse:"M3,13H5.79L10.1,4.79L11.28,13.75L14.5,9.66L17.83,13H21V15H17L14.67,12.67L9.92,18.73L8.94,11.31L7,15H3V13Z",
+  copy:"M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z",
+  plus:"M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z",
+  dl:"M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z",
+  ul:"M9,16V10H5L12,3L19,10H15V16H9M5,20V18H19V20H5Z",
+  pen:"M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z",
+  del:"M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z",
+  ext:"M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z",
+  theme:"M12,18V6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M20,15.31L23.31,12L20,8.69V4H15.31L12,0.69L8.69,4H4V8.69L0.69,12L4,15.31V20H8.69L12,23.31L15.31,20H20V15.31Z",
+  close:"M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z",
+  pin:"M12,11.5A2.5,2.5 0 0,1 9.5,9A2.5,2.5 0 0,1 12,6.5A2.5,2.5 0 0,1 14.5,9A2.5,2.5 0 0,1 12,11.5M12,2A7,7 0 0,0 5,9C5,14.25 12,22 12,22C12,22 19,14.25 19,9A7,7 0 0,0 12,2Z",
+  tag:"M5.5,7A1.5,1.5 0 0,1 4,5.5A1.5,1.5 0 0,1 5.5,4A1.5,1.5 0 0,1 7,5.5A1.5,1.5 0 0,1 5.5,7M21.41,11.58L12.41,2.58C12.05,2.22 11.55,2 11,2H4C2.89,2 2,2.89 2,4V11C2,11.55 2.22,12.05 2.59,12.41L11.58,21.41C11.95,21.77 12.45,22 13,22C13.55,22 14.05,21.77 14.41,21.41L21.41,14.41C21.78,14.05 22,13.55 22,13C22,12.44 21.77,11.94 21.41,11.58Z",
+  batt:"M16,20H8V6H16M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z",
+  gauge:"M12,16A3,3 0 0,1 9,13C9,11.88 9.61,10.9 10.5,10.39L20.21,4.77L14.68,14.35C14.18,15.33 13.17,16 12,16M12,3C13.81,3 15.5,3.5 16.97,4.32L14.87,5.53C14,5.19 13,5 12,5A8,8 0 0,0 4,13C4,15.21 4.89,17.21 6.34,18.65H6.35C6.74,19.04 6.74,19.67 6.35,20.06C5.96,20.45 5.32,20.45 4.93,20.07V20.07C3.12,18.26 2,15.76 2,13A10,10 0 0,1 12,3M22,13C22,15.76 20.88,18.26 19.07,20.07V20.07C18.68,20.45 18.05,20.45 17.66,20.06C17.27,19.67 17.27,19.04 17.66,18.65V18.65C19.11,17.2 20,15.21 20,13C20,12 19.81,11 19.46,10.1L20.67,8C21.5,9.5 22,11.18 22,13Z",
+  alert:"M13,14H11V9H13M13,18H11V16H13M1,21H23L12,2L1,21Z",
+  map:"M9,2V8H11V11H5C3.89,11 3,11.89 3,13V16H1V22H7V16H5V13H11V16H9V22H15V16H13V13H19V16H17V22H23V16H21V13C21,11.89 20.11,11 19,11H13V8H15V2H9Z",
+};
+const ic = (n,extra="") => `<svg class="i" viewBox="0 0 24 24" ${extra}><path d="${MDI[n]}"/></svg>`;
+
+/* ---------- taxonomy ---------- */
+const PROTO = {
+  zha:["Zigbee","--zigbee"], deconz:["Zigbee","--zigbee"],
+  zwave_js:["Z-Wave","--zwave"],
+  matter:["Matter","--matter"], thread:["Thread","--thread"], homekit_controller:["HomeKit","--matter"], homekit:["HomeKit","--matter"],
+  mqtt:["MQTT","--mqtt"],
+  esphome:["WiFi · ESPHome","--wifi"], hue:["Hue bridge","--wifi"], wled:["WiFi","--wifi"],
+  cast:["WiFi · LAN","--wifi"], sonos:["WiFi · LAN","--wifi"], apple_tv:["WiFi · LAN","--wifi"],
+  roku:["WiFi · LAN","--wifi"], samsungtv:["WiFi · LAN","--wifi"], androidtv_remote:["WiFi · LAN","--wifi"],
+  webostv:["WiFi · LAN","--wifi"], upnp:["WiFi · LAN","--wifi"], dlna_dmr:["WiFi · LAN","--wifi"],
+  reolink:["WiFi · LAN","--wifi"], yeelight:["WiFi","--wifi"], tplink:["WiFi","--wifi"], shelly:["WiFi","--wifi"],
+  kasa:["WiFi","--wifi"], roborock:["WiFi · Cloud","--cloud"],
+  mobile_app:["Companion app","--cloud"],
+  tuya:["Cloud","--cloud"], smartthings:["Cloud","--cloud"], ring:["Cloud","--cloud"],
+  nest:["Cloud","--cloud"], ecobee:["Cloud","--cloud"], myq:["Cloud","--cloud"], vesync:["Cloud","--cloud"],
+  xbox:["WiFi · LAN","--wifi"], plex:["WiFi · LAN","--wifi"], kodi:["WiFi · LAN","--wifi"],
+};
+const SERVICE = new Set(["hacs","hassio","sun","met","backup","google_translate","wake_on_lan",
+  "ambient_network","radio_browser","tts","conversation","shopping_list","todo","weather","workday",
+  "moon","season","uptime","version","systemmonitor","supervisor","onboarding","analytics",
+  "default_config","cloud","schedule","local_todo","local_calendar","holiday","thread_border_router","speedtestdotnet","speedtest"]);
+const CATNAME = {smart:"Smart home", compute:"Computing & media", service:"Internal & services"};
+function classify(domains){
+  for (const d of domains){
+    if (d==="mobile_app") return {cat:"compute", name:"Companion app", v:"--cloud"};
+    if (d==="nmap_tracker") return {cat:"compute", name:"Network · IP", v:"--manual"};
+    if (PROTO[d]) return {cat:"smart", name:PROTO[d][0], v:PROTO[d][1]};
+  }
+  const d = domains[0] || "unknown";
+  return {cat: SERVICE.has(d) ? "service" : "smart", name:d, v: SERVICE.has(d) ? "--svc" : "--other"};
+}
+
+/* ---------- storage / clipboard / toast ---------- */
+const store = {
+  get(k){ try{return localStorage.getItem(k)}catch(e){return null} },
+  set(k,v){ try{localStorage.setItem(k,v)}catch(e){} },
+};
+let toastT;
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1400); }
+function copyText(text){
+  const fb=()=>{ const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta);
+    ta.select(); try{document.execCommand("copy"); toast("Copied");}catch(e){toast("Copy failed");} ta.remove(); };
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(()=>toast("Copied"), fb);
+  else fb();
+}
+const cpyBtn = v => v ? `<button class="cpy" data-copy="${h(v)}" title="Copy">${ic("copy")}</button>` : "";
+
+/* ---------- HA websocket ---------- */
+let ws, msgId = 1, pend = {};
+const call = p => new Promise((res, rej) => { const id=msgId++; pend[id]={res,rej}; ws.send(JSON.stringify({id,...p})); });
+function connect(url, token){
+  return new Promise((resolve, reject) => {
+    const wsu = url.replace(/^http/,"ws").replace(/\/+$/,"") + "/api/websocket";
+    try { ws = new WebSocket(wsu); } catch(e){ return reject(e); }
+    ws.onerror = () => reject(new Error("Can't reach " + wsu + " — check the URL and that you're on the same network."));
+    ws.onmessage = ev => {
+      const m = JSON.parse(ev.data);
+      if (m.type==="auth_required") ws.send(JSON.stringify({type:"auth", access_token:token}));
+      else if (m.type==="auth_ok") resolve();
+      else if (m.type==="auth_invalid") reject(new Error("Token rejected — generate a new long-lived token and retry."));
+      else if (m.type==="result" && pend[m.id]) { (m.success?pend[m.id].res(m.result):pend[m.id].rej(new Error(m.error?.message||"error"))); delete pend[m.id]; }
+      else if (m.type==="event" && m.event?.event_type==="state_changed") onStateChange(m.event.data);
+    };
+  });
+}
+
+/* ---------- model ---------- */
+const S = { states:{}, ha:[], manual:[], areas:{}, baseUrl:"", view:"overview",
+            q:"", protoFilter:null, catFilter:null, areaFilter:null, sort:["name",1], feed:[],
+            mapCollapsed:new Set(), mapSvc:false, mapFocus:null, mapStatus:"all", mapProto:null, mapArea:null,
+            newDevs:[], netHist:null, netFetching:false, wattson:null, breakerOf:{}, mapLens:"proto", _lastLens:"proto" };
+const THRESH = { batt:20, down:500 };
+let MZ = {k:1, x:0, y:0};
+const allDevices = () => S.ha.concat(S.manual);
+
+const FEED_DOMAINS = new Set(["light","switch","media_player","lock","cover","vacuum","climate","fan","binary_sensor","person","device_tracker"]);
+function onStateChange(data){
+  const ns=data.new_state, os=data.old_state;
+  if (ns) S.states[ns.entity_id]=ns;
+  if (ns && os && ns.state!==os.state){
+    const dom = ns.entity_id.split(".")[0];
+    const avail = ns.state==="unavailable"||os.state==="unavailable";
+    if (FEED_DOMAINS.has(dom) || avail){
+      S.feed.unshift({ t:Date.now(), eid:ns.entity_id,
+        name:ns.attributes?.friendly_name||ns.entity_id, from:os.state, to:ns.state });
+      if (S.feed.length>40) S.feed.length=40;
+    }
+  }
+  refreshSoft();
+}
+
+function loadManual(){ try{ S.manual = JSON.parse(store.get("eco_manual")||"[]"); }catch(e){ S.manual=[]; }
+  for (const m of S.manual){ m.proto={cat:m.cat||"compute",name:"Manual",v:"--manual"}; m.ents=[]; m.domains=["manual"]; m.manual=true; } }
+function saveManual(){ store.set("eco_manual", JSON.stringify(S.manual.map(({proto,ents,domains,manual,...rest})=>rest))); }
+
+async function loadAll(){
+  const [states, entReg, devReg, areaReg, entries] = await Promise.all([
+    call({type:"get_states"}), call({type:"config/entity_registry/list"}),
+    call({type:"config/device_registry/list"}), call({type:"config/area_registry/list"}),
+    call({type:"config_entries/get"}),
+  ]);
+  S.states = Object.fromEntries(states.map(s=>[s.entity_id,s]));
+  S.areas = Object.fromEntries(areaReg.map(a=>[a.area_id,a.name]));
+  const domByEntry = Object.fromEntries(entries.map(e=>[e.entry_id, e.domain]));
+  const entsByDev = {};
+  for (const e of entReg){ if(!e.device_id) continue; (entsByDev[e.device_id] ||= []).push(e); }
+  S.ha = devReg.map(d=>{
+    const domains = [...new Set((d.config_entries||[]).map(id=>domByEntry[id]).filter(Boolean))];
+    const proto = classify(domains);
+    const ents = (entsByDev[d.id]||[]).filter(e=>!e.disabled_by);
+    const mac = (d.connections||[]).find(c=>c[0]==="mac")?.[1] || "";
+    let area = d.area_id ? S.areas[d.area_id] : "";
+    if (!area) for (const e of ents){ if (e.area_id){ area=S.areas[e.area_id]; break; } }
+    const sts = ents.map(e=>S.states[e.entity_id]).filter(Boolean);
+    const unavailable = sts.length>0 && sts.every(s=>s.state==="unavailable"||s.state==="unknown");
+    let ip=""; for (const s of sts){ const a=s.attributes||{}; if (a.ip){ ip=a.ip; break; } if (a.ip_address){ ip=a.ip_address; break; } if (a.host){ ip=a.host; break; } }
+    return { id:d.id, name:d.name_by_user||d.name||"(unnamed)", manufacturer:d.manufacturer||"",
+      model:d.model||"", sw:d.sw_version||"", hw:d.hw_version||"", os:"", ip, notes:"",
+      mac, area:area||"", domains, proto, ents, unavailable,
+      via:d.via_device_id||null,
+      battLow: sts.some(s=>s.attributes?.device_class==="battery" && !isNaN(+s.state) && +s.state<20) };
+  }).filter(d=>d.ents.length||d.manufacturer||d.model);
+  /* dedupe: hide nmap trackers whose MAC matches a device we already know richly */
+  const knownMacs = new Set(S.ha.filter(d=>!d.domains.includes("nmap_tracker")&&d.mac).map(d=>d.mac.toLowerCase()));
+  S.ha = S.ha.filter(d=>!(d.domains.includes("nmap_tracker") && d.mac && knownMacs.has(d.mac.toLowerCase())));
+  await call({type:"subscribe_events", event_type:"state_changed"});
+}
+
+/* ---------- derived ---------- */
+const physical = () => allDevices().filter(d=>d.proto.cat!=="service");
+const battSensors = () => Object.values(S.states).filter(s=>s.attributes?.device_class==="battery" && !isNaN(+s.state));
+const lowBatt = () => battSensors().filter(s=>+s.state<20);
+const updatesPending = () => Object.values(S.states).filter(s=>s.entity_id.startsWith("update.") && s.state==="on");
+const unavailableEnts = () => Object.values(S.states).filter(s=>s.state==="unavailable"||s.state==="unknown");
+function protoCounts(devs){
+  const m={}; for(const d of devs){ (m[d.proto.name] ||= {n:0,v:d.proto.v,name:d.proto.name,cat:d.proto.cat}).n++; }
+  return Object.values(m).sort((a,b)=>b.n-a.n);
+}
+const filtered = () => {
+  const q = S.q.toLowerCase();
+  return allDevices().filter(d=>{
+    if (S.catFilter && d.proto.cat!==S.catFilter) return false;
+    if (S.protoFilter && d.proto.name!==S.protoFilter) return false;
+    if (S.areaFilter!==null && (d.area||"")!==S.areaFilter) return false;
+    if (!q) return true;
+    return [d.name,d.manufacturer,d.model,d.mac,d.ip,d.os,d.notes,d.area,d.proto.name].join(" ").toLowerCase().includes(q);
+  });
+};
+
+/* ---------- routing ---------- */
+const VIEWS = [["overview","Overview","dash"],["map","Map","map"],["network","Network","gauge"],["hardware","Hardware","chip"],["health","Health","pulse"]];
+function nav(view, push=true){
+  S.view = VIEWS.some(([k])=>k===view) ? view : "overview";
+  if (push) history.pushState({view:S.view}, "", "#"+S.view);
+  render();
+}
+window.addEventListener("popstate", e=>{
+  if (document.getElementById("drawer").classList.contains("open")) { closeDrawer(false); return; }
+  S.view = e.state?.view || (location.hash.slice(1)||"overview");
+  if (!VIEWS.some(([k])=>k===S.view)) S.view="overview";
+  render();
+});
+
+/* ---------- rendering ---------- */
+const h = s => (s??"").toString().replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $ = sel => document.querySelector(sel);
+
+function renderNav(){
+  $("#nav").innerHTML = VIEWS.map(([k,l,i])=>{
+    const n = k==="hardware" ? allDevices().length : k==="health" ? unavailableEnts().length : "";
+    return `<button data-v="${k}" class="${S.view===k?"on":""}">${ic(i)}${l}<span class="n">${n}</span></button>`;
+  }).join("");
+  document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>nav(b.dataset.v));
+}
+
+function specBar(){
+  const phys = physical(), svcN = allDevices().length - phys.length;
+  const pc = protoCounts(phys), total = phys.length + svcN || 1;
+  const segs = pc.map(p=>`<div class="seg" data-pn="${h(p.name)}" title="${h(p.name)} · ${p.n}" style="width:${(p.n/total*100).toFixed(2)}%;background:var(${p.v})"></div>`).join("")
+    + (svcN?`<div class="seg" data-cat="service" title="Internal & services · ${svcN}" style="width:${(svcN/total*100).toFixed(2)}%;background:var(--svc)"></div>`:"");
+  const key = p => `<span class="k" data-pn="${h(p.name)}"><span class="dot" style="background:var(${p.v})"></span>${h(p.name)} <b>${p.n}</b></span>`;
+  const grp = (t,a)=>a.length?`<div class="keygrp"><div class="gt">${t}</div><div class="keys">${a.map(key).join("")}</div></div>`:"";
+  return `<div class="eyebrow">Ecosystem composition · ${phys.length} devices <span style="color:var(--faint)">(+ ${svcN} internal)</span></div>
+    <div id="specbar">${segs}</div>
+    ${grp("Smart home", pc.filter(p=>p.cat==="smart"))}
+    ${grp("Computing & media", pc.filter(p=>p.cat==="compute"))}
+    <div class="keygrp"><div class="gt">Internal & services</div><div class="keys">
+      <span class="k" data-cat="service"><span class="dot" style="background:var(--svc)"></span>HA add-ons, helpers &amp; integrations <b>${svcN}</b></span>
+    </div></div>`;
+}
+function bindSpec(){
+  document.querySelectorAll("[data-pn]").forEach(el=>el.onclick=()=>{ S.protoFilter=el.dataset.pn; S.catFilter=null; S.areaFilter=null; nav("hardware"); });
+  document.querySelectorAll("[data-cat]").forEach(el=>el.onclick=()=>{ S.catFilter=el.dataset.cat; S.protoFilter=null; S.areaFilter=null; nav("hardware"); });
+}
+
+const rel = t => { const s=(Date.now()-t)/1000; return s<60?"now":s<3600?Math.floor(s/60)+"m":Math.floor(s/3600)+"h"; };
+
+function viewOverview(){
+  const phys = physical();
+  const dead = phys.filter(d=>d.unavailable);
+  const svcN = allDevices().length - phys.length;
+  const pc = protoCounts(phys);
+  const tiles = [
+    ["Devices", phys.length, "", "hardware"],
+    ["Entities", Object.keys(S.states).length, "", null],
+    ["Devices fully down", dead.length, dead.length?"bad":"ok", "health"],
+    ["Unavailable entities", unavailableEnts().length, unavailableEnts().length?"warn":"ok", "health"],
+    ["Updates pending", updatesPending().length, updatesPending().length?"warn":"ok", "health"],
+    ["Batteries < 20%", lowBatt().length, lowBatt().length?"bad":"ok", "health"],
+  ];
+  const byArea={}; for(const d of phys){ const a=d.area||""; (byArea[a] ||= {n:0,down:0}); byArea[a].n++; if(d.unavailable) byArea[a].down++; }
+  const areas = Object.entries(byArea).sort((a,b)=>b[1].n-a[1].n);
+  const byMfr={}; for(const d of phys){ if(d.manufacturer) byMfr[d.manufacturer]=(byMfr[d.manufacturer]||0)+1; }
+  const mfrs = Object.entries(byMfr).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const mmax = mfrs[0]?.[1]||1;
+  $("#main").innerHTML =
+    `<div class="cols" style="margin-bottom:14px">
+       <div class="card"><h3>${ic("chip")} Devices by protocol</h3>
+         <div class="donutwrap">
+           ${donut(pc.map(p=>({n:p.n,color:`var(${p.v})`})), phys.length, "DEVICES")}
+           <div class="dleg">${pc.slice(0,9).map(p=>`<span class="k" data-pn="${h(p.name)}" style="cursor:pointer"><span class="dot" style="background:var(${p.v})"></span>${h(p.name)} <b>${p.n}</b></span>`).join("")}
+             <span class="k" data-svc style="cursor:pointer"><span class="dot" style="background:var(--svc)"></span>internal &amp; services <b>${svcN}</b></span>
+           </div></div></div>
+       ${S.wattson?(()=>{
+         const bs=Object.values(S.wattson.breakers||{});
+         const conf=bs.filter(b=>b.status==="confirmed").length, guess=bs.filter(b=>b.status==="guess").length;
+         const slots=S.wattson.panel?.slots||bs.length||1, unk=Math.max(slots-conf-guess,0);
+         const seg=(n,c)=>n?`<div style="flex:${n};background:${c}"></div>`:"";
+         return `<div class="card" id="wcard" style="cursor:pointer"><h3>${ic("alert")} Electrical panel · ${h(S.wattson.panel?.name||"")}</h3>
+           <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;margin:6px 0 10px;border:1px solid var(--line)">
+             ${seg(conf,"var(--ok)")}${seg(guess,"var(--warn)")}${seg(unk,"var(--svc)")}</div>
+           <div class="keys">
+             <span class="k"><span class="dot" style="background:var(--ok)"></span>confirmed <b>${conf}</b></span>
+             <span class="k"><span class="dot" style="background:var(--warn)"></span>tentative <b>${guess}</b></span>
+             <span class="k"><span class="dot" style="background:var(--svc)"></span>unmapped <b>${unk}</b></span>
+           </div>
+           <div class="u" style="font-size:11.5px;color:var(--dim);margin-top:8px">${Object.keys(S.breakerOf).length} devices linked to breakers — shown in each device's detail.</div>
+         </div>`;})():""}
+       <div class="card"><h3>${ic("tag")} Top manufacturers</h3>
+         ${mfrs.map(([k,v])=>`<div class="bbar" data-mfr="${h(k)}" style="cursor:pointer"><span class="nm">${h(k)}</span><span class="tr"><span class="fl" style="width:${v/mmax*100}%;background:var(--cloud)"></span></span><span class="ct">${v}</span></div>`).join("")}</div>
+     </div>` +
+    attnBlock() +
+    `<div class="tiles">${tiles.map(([l,v,c,go])=>`<div class="tile ${c} ${go?"click":""}" ${go?`data-go="${go}"`:""}><div class="v">${v}</div><div class="l">${l}</div></div>`).join("")}</div>
+     <div class="eyebrow">${ic("pin")} Areas</div>
+     <div class="areagrid">${areas.map(([a,o])=>`<div class="acard ${a?"":"ghost"}" data-area="${h(a)}">
+        <div class="an">${a?h(a):"No area"}</div><div class="ac">${o.n}</div>${o.down?`<div class="ad">● ${o.down} down</div>`:""}</div>`).join("")}</div>
+     <div class="card feed"><h3>${ic("pulse")} Live activity</h3>
+       ${S.feed.length ? S.feed.slice(0,12).map(e=>{
+          const bad = e.to==="unavailable", back = e.from==="unavailable";
+          const cls = bad?"stat-bad":back?"stat-on":e.to==="on"?"stat-on":"stat-off";
+          return `<div class="ev"><span class="tm">${rel(e.t)}</span><span class="nm">${h(e.name)}</span><span class="st ${cls}">${e.from?h(e.from)+" → ":""}${h(e.to)}</span></div>`;
+        }).join("") : `<div class="empty">Waiting for the house to do something…</div>`}</div>`;
+  bindAttn();
+  const wc=$("#wcard"); if(wc) wc.onclick=()=>{ S.mapLens="breaker"; nav("map"); };
+  document.querySelectorAll("[data-pn]").forEach(el=>el.onclick=()=>{ S.protoFilter=el.dataset.pn; S.catFilter=null; S.areaFilter=null; nav("hardware"); });
+  const sv=document.querySelector("[data-svc]"); if(sv) sv.onclick=()=>{ S.catFilter="service"; S.protoFilter=null; S.areaFilter=null; nav("hardware"); };
+  document.querySelectorAll("[data-go]").forEach(t=>t.onclick=()=>nav(t.dataset.go));
+  document.querySelectorAll("[data-area]").forEach(c=>c.onclick=()=>{ S.areaFilter=c.dataset.area; S.protoFilter=null; S.catFilter=null; nav("hardware"); });
+  document.querySelectorAll("[data-mfr]").forEach(c=>c.onclick=()=>{ S.q=c.dataset.mfr; $("#search").value=S.q; nav("hardware"); });
+}
+
+/* ---------- speedtest / attention / new devices ---------- */
+function findSpeed(){
+  const out={down:null,up:null,ping:null};
+  for (const [id,s] of Object.entries(S.states)){
+    if (!/speedtest/i.test(id)) continue;
+    if (/download/i.test(id)) out.down=s;
+    else if (/upload/i.test(id)) out.up=s;
+    else if (/ping/i.test(id)) out.ping=s;
+  }
+  return out;
+}
+function attention(){
+  const items=[];
+  for (const d of physical().filter(d=>d.unavailable)){
+    const bk=S.breakerOf[d.id];
+    items.push({sev:"bad", text:`${d.name} is unavailable`, why:(d.area||d.proto.name)+(bk?` · breaker #${bk.slot}`:""), go:()=>openDrawer(d.id)});
+  }
+  for (const s of battSensors().filter(s=>+s.state<THRESH.batt).sort((a,b)=>+a.state-+b.state))
+    items.push({sev:"bad", text:`${s.attributes.friendly_name||s.entity_id} at ${s.state}%`, why:"battery", go:()=>nav("health")});
+  const sp=findSpeed();
+  if (sp.down && !isNaN(+sp.down.state) && +sp.down.state < THRESH.down)
+    items.push({sev:"bad", text:`Internet download at ${Math.round(+sp.down.state)} Mbit/s`, why:`below ${THRESH.down}`, go:()=>nav("network")});
+  if (sp.down && (sp.down.state==="unavailable"||sp.down.state==="unknown"))
+    items.push({sev:"warn", text:"Speedtest sensor unavailable", why:"network", go:()=>nav("network")});
+  if (S.newDevs.length)
+    items.push({sev:"warn", text:`${S.newDevs.length} new device${S.newDevs.length>1?"s":""} since last visit`, why:"registry", go:()=>{S.catFilter=null;S.protoFilter=null;S.areaFilter=null;nav("hardware");}});
+  if (S.wattson){
+    const tent=Object.values(S.wattson.breakers||{}).filter(b=>b.status==="guess"&&((b.devices||[]).length||(b.entities||[]).length));
+    if (tent.length) items.push({sev:"info", text:`${tent.length} tentative breaker${tent.length>1?"s":""} with linked devices — ready to confirm`, why:"wattson", go:()=>{S.mapLens="breaker"; nav("map");}});
+  }
+  const up=updatesPending().length;
+  if (up) items.push({sev:"info", text:`${up} update${up>1?"s":""} pending`, why:"maintenance", go:()=>nav("health")});
+  return items;
+}
+function attnBlock(){
+  const items=attention();
+  if (!items.length) return "";
+  const col={bad:"var(--bad)",warn:"var(--warn)",info:"var(--faint)"};
+  return `<div class="attn"><h3>${ic("alert")} Needs attention · ${items.length}</h3>
+    ${items.slice(0,8).map((it,i)=>`<div class="arow" data-at="${i}">
+      <span class="sev" style="background:${col[it.sev]}"></span>${h(it.text)}<span class="why">${h(it.why)}</span></div>`).join("")}
+    ${items.length>8?`<div class="arow" style="color:var(--faint)">… and ${items.length-8} more</div>`:""}</div>`;
+}
+function bindAttn(){
+  const items=attention();
+  document.querySelectorAll("[data-at]").forEach(r=>r.onclick=()=>items[+r.dataset.at]?.go());
+}
+function diffNewDevices(){
+  const cur = S.ha.map(d=>d.id);
+  let known=null; try{ known=JSON.parse(store.get("eco_known")); }catch(e){}
+  if (Array.isArray(known)){
+    const ks=new Set(known);
+    S.newDevs = S.ha.filter(d=>!ks.has(d.id)).map(d=>d.id);
+  } else S.newDevs=[];
+  store.set("eco_known", JSON.stringify(cur));
+}
+/* ---------- network view ---------- */
+const fmtT = ts => { const d=new Date(ts*1000); return d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0"); };
+function spark(points, thresh, color){
+  if (!points || points.length<2) return `<div class="empty">No history yet — speedtest runs on its own schedule; check back later.</div>`;
+  const W=620,H=140,P=26;
+  const ts=points.map(p=>p.t), vs=points.map(p=>p.v);
+  const t0=Math.min(...ts), t1=Math.max(...ts);
+  const vmax=Math.max(...vs, thresh||0)*1.08, vmin=0;
+  const X=t=> P+(t-t0)/((t1-t0)||1)*(W-2*P);
+  const Y=v=> H-P-(v-vmin)/((vmax-vmin)||1)*(H-2*P);
+  const path=points.map((p,i)=>`${i?"L":"M"}${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join(" ");
+  const th = thresh?`<line x1="${P}" x2="${W-P}" y1="${Y(thresh)}" y2="${Y(thresh)}" stroke="var(--bad)" stroke-dasharray="4 4" stroke-width="1"/>
+    <text x="${W-P}" y="${Y(thresh)-4}" text-anchor="end" style="font:9px var(--mono);fill:var(--bad)">${thresh}</text>`:"";
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}">
+    <line x1="${P}" x2="${W-P}" y1="${H-P}" y2="${H-P}" stroke="var(--line)"/>
+    ${th}<path d="${path}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round"/>
+    <text x="${P}" y="${H-8}" style="font:9px var(--mono);fill:var(--faint)">${fmtT(t0)}</text>
+    <text x="${W-P}" y="${H-8}" text-anchor="end" style="font:9px var(--mono);fill:var(--faint)">${fmtT(t1)}</text>
+    <text x="${P}" y="${P-8}" style="font:9px var(--mono);fill:var(--faint)">${Math.round(vmax)}</text></svg>`;
+}
+async function fetchNetHist(ids){
+  const end=new Date(), start=new Date(Date.now()-24*3600*1000);
+  const res = await call({type:"history/history_during_period",
+    start_time:start.toISOString(), end_time:end.toISOString(),
+    entity_ids:ids, minimal_response:true, no_attributes:true, significant_changes_only:false});
+  const parse = arr => (arr||[]).map(it=>{
+    const v=+(it.s ?? it.state); 
+    let t=it.lu ?? it.last_updated_ts;
+    if (t==null && it.last_updated) t=Date.parse(it.last_updated)/1000;
+    return {t,v};
+  }).filter(p=>!isNaN(p.v)&&p.t);
+  const out={}; for(const id of ids) out[id]=parse(res[id]);
+  return out;
+}
+function viewNetwork(){
+  const sp=findSpeed();
+  const okC="var(--ok)", badC="var(--bad)";
+  const big=(s,label,unit,bad)=>{
+    const v=s&&!isNaN(+s.state)?(+s.state):null;
+    const col = v==null?"var(--faint)":bad&&bad(v)?badC:okC;
+    return `<div class="card netbig"><h3>${label}</h3>
+      <div class="v" style="color:${col}">${v==null?"—":(unit==="ms"?Math.round(v):v.toFixed(unit==="Mbit/s"&&v<100?1:0))}<span class="u"> ${unit}</span></div>
+      <div class="u" style="margin-top:4px">${s?("updated "+rel(Date.parse(s.last_updated||s.last_changed||Date.now()))) :"sensor not found"}</div></div>`;
+  };
+  let histHtml = `<div class="empty">Loading 24h history…</div>`;
+  if (!sp.down) histHtml = `<div class="empty">No Speedtest sensors found. Install the Speedtest.net integration in HA, then reload.</div>`;
+  else if (S.netHist && Date.now()-S.netHist.at<5*60*1000){
+    const hd=S.netHist.data;
+    histHtml =
+      `<div class="card" style="margin-bottom:12px"><h3>${ic("dl")} Download · 24h</h3>${spark(hd[sp.down.entity_id], THRESH.down, "var(--wifi)")}</div>
+       <div class="cols">
+         ${sp.up?`<div class="card"><h3>${ic("ul")} Upload · 24h</h3>${spark(hd[sp.up.entity_id], null, "var(--matter)")}</div>`:""}
+         ${sp.ping?`<div class="card"><h3>${ic("pulse")} Ping · 24h</h3>${spark(hd[sp.ping.entity_id], null, "var(--zwave)")}</div>`:""}
+       </div>`;
+  } else if (!S.netFetching){
+    S.netFetching=true;
+    const ids=[sp.down,sp.up,sp.ping].filter(Boolean).map(s=>s.entity_id);
+    fetchNetHist(ids).then(data=>{ S.netHist={at:Date.now(),data}; })
+      .catch(()=>{ S.netHist={at:Date.now(),data:{}}; })
+      .finally(()=>{ S.netFetching=false; if(S.view==="network") render(); });
+  }
+  $("#main").innerHTML =
+    `<div class="tiles" style="margin-top:4px">
+      ${big(sp.down,"Download","Mbit/s",v=>v<THRESH.down)}
+      ${big(sp.up,"Upload","Mbit/s",null)}
+      ${big(sp.ping,"Ping","ms",v=>v>80)}
+     </div>` + histHtml +
+    `<div class="empty" style="text-align:left;padding:14px 4px">Threshold: download below ${THRESH.down} Mbit/s flags on the Overview. Network device presence (laptops, printers, everything with an IP) arrives here once the NetAlertX → MQTT pipe is live.</div>`;
+}
+/* ---------- exports ---------- */
+function exportCSV(){
+  const cols=["name","category","protocol","manufacturer","model","area","mac","ip","os","sw","entities","notes"];
+  const esc=v=>`"${(v??"").toString().replace(/"/g,'""')}"`;
+  const lines=[cols.join(",")].concat(allDevices().map(d=>[
+    d.name, CATNAME[d.proto.cat]||d.proto.cat, d.proto.name, d.manufacturer, d.model, d.area,
+    d.mac, d.ip, d.os, d.sw, d.ents.length, d.notes].map(esc).join(",")));
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([lines.join("\n")],{type:"text/csv"}));
+  a.download="holmes-inventory.csv"; a.click(); URL.revokeObjectURL(a.href);
+}
+function exportManual(){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([store.get("eco_manual")||"[]"],{type:"application/json"}));
+  a.download="holmes-manual-devices.json"; a.click(); URL.revokeObjectURL(a.href);
+}
+function importManual(){
+  const inp=document.createElement("input"); inp.type="file"; inp.accept=".json";
+  inp.onchange=()=>{ const f=inp.files[0]; if(!f) return;
+    f.text().then(t=>{ try{ const arr=JSON.parse(t); if(Array.isArray(arr)){ store.set("eco_manual",t); loadManual(); render(); toast("Imported"); } }catch(e){ toast("Not a valid export"); } }); };
+  inp.click();
+}
+
+function viewHardware(){
+  const cats=[["smart","Smart home"],["compute","Computing & media"],["service","Internal & services"]];
+  const pc = protoCounts(S.catFilter ? allDevices().filter(d=>d.proto.cat===S.catFilter) : physical());
+  const list = filtered().sort((a,b)=>{
+    const [k,dir]=S.sort, av=(a[k]??"")+"", bv=(b[k]??"")+"";
+    return av.localeCompare(bv,undefined,{numeric:true})*dir;
+  });
+  const arr = k => S.sort[0]===k ? `<span class="arr">${S.sort[1]>0?"▲":"▼"}</span>` : "";
+  const TH = (k,l)=>`<th data-s="${k}">${l} ${arr(k)}</th>`;
+  $("#main").innerHTML =
+    `<div class="toolrow">
+       <button class="chip ${!S.catFilter&&!S.protoFilter&&S.areaFilter===null?"on":""}" data-cf="">All · ${allDevices().length}</button>
+       ${cats.map(([k,l])=>`<button class="chip ${S.catFilter===k?"on":""}" data-cf="${k}">${l} · ${allDevices().filter(d=>d.proto.cat===k).length}</button>`).join("")}
+       ${S.areaFilter!==null?`<button class="chip on" id="areaX">${ic("pin")} ${S.areaFilter||"No area"} ${ic("close")}</button>`:""}
+       <span class="spacer"></span>
+       <button class="chip" id="addDev">${ic("plus")} Add device</button>
+     </div>
+     <div class="toolrow">${pc.map(p=>`<button class="chip ${S.protoFilter===p.name?"on":""}" data-pf="${h(p.name)}"><span class="dot" style="background:var(${p.v})"></span>${h(p.name)} · ${p.n}</button>`).join("")}</div>
+     <table><thead><tr>
+       ${TH("name","Device")}${TH("manufacturer","Manufacturer")}${TH("model","Model")}
+       ${TH("area","Area")}<th>Protocol</th>${TH("ip","IP")}${TH("mac","MAC")}${TH("sw","FW / OS")}<th>Ent.</th>
+     </tr></thead><tbody>` +
+    (list.length ? list.map(d=>`<tr class="row" data-d="${d.id}">
+       <td>${d.unavailable?'<span class="stat-bad">●</span> ':""}${h(d.name)}${d.manual?' <span class="badge" style="font-size:10px">manual</span>':""}${S.newDevs.includes(d.id)?' <span class="badge" style="font-size:10px;color:var(--warn)">new</span>':""}${d.manual?"":` <a class="cpy" href="${S.baseUrl}/config/devices/device/${d.id}" target="_blank" title="Open in Home Assistant" onclick="event.stopPropagation()">${ic("ext")}</a>`}</td>
+       <td class="mono">${h(d.manufacturer)}</td><td class="mono">${h(d.model)}</td>
+       <td>${h(d.area)}</td>
+       <td><span class="badge"><span class="dot" style="background:var(${d.proto.v})"></span>${h(d.proto.name)}</span></td>
+       <td class="mono">${h(d.ip)} ${cpyBtn(d.ip)}</td>
+       <td class="mono">${h(d.mac)} ${cpyBtn(d.mac)}</td><td class="mono">${h(d.os||d.sw).slice(0,18)}</td>
+       <td class="mono">${d.ents.length||""}</td></tr>`).join("")
+     : `<tr><td colspan="9"><div class="empty">No devices match. Add one with ＋ Add device.</div></td></tr>`) +
+    `</tbody></table>`;
+  document.querySelectorAll("[data-cf]").forEach(c=>c.onclick=()=>{S.catFilter=c.dataset.cf||null;S.protoFilter=null;S.areaFilter=null;render();});
+  document.querySelectorAll("[data-pf]").forEach(c=>c.onclick=()=>{S.protoFilter=S.protoFilter===c.dataset.pf?null:c.dataset.pf;render();});
+  const ax=$("#areaX"); if(ax) ax.onclick=()=>{S.areaFilter=null;render();};
+  document.querySelectorAll("th[data-s]").forEach(t=>t.onclick=()=>{const k=t.dataset.s;S.sort=[k,S.sort[0]===k?-S.sort[1]:1];render();});
+  document.querySelectorAll("tr.row").forEach(r=>r.onclick=e=>{ if(e.target.closest(".cpy")) return; openDrawer(r.dataset.d); });
+  bindCopies();
+  $("#addDev").onclick=()=>openModal();
+}
+
+/* ---------- health charts ---------- */
+function donut(parts, centerN, centerLabel){ // parts: [{n,color}]
+  const total = parts.reduce((a,p)=>a+p.n,0)||1;
+  centerN = centerN ?? total; centerLabel = centerLabel || "ENTITIES";
+  const C = 2*Math.PI*42; let off=0;
+  const rings = parts.map(p=>{
+    const len = p.n/total*C;
+    const r = `<circle r="42" cx="55" cy="55" fill="none" stroke="${p.color}" stroke-width="14"
+      stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-off}" transform="rotate(-90 55 55)"/>`;
+    off += len; return r;
+  }).join("");
+  return `<svg width="110" height="110" viewBox="0 0 110 110">${rings}
+    <text x="55" y="52" text-anchor="middle" style="font:600 19px var(--mono);fill:var(--text)">${centerN}</text>
+    <text x="55" y="68" text-anchor="middle" style="font:9px var(--mono);fill:var(--faint);letter-spacing:.1em">${centerLabel}</text></svg>`;
+}
+function viewHealth(){
+  const dead = physical().filter(d=>d.unavailable);
+  const batts = battSensors().sort((a,b)=>+a.state-+b.state);
+  const up = updatesPending();
+  const ents = Object.values(S.states);
+  const unav = ents.filter(s=>s.state==="unavailable").length;
+  const unk = ents.filter(s=>s.state==="unknown").length;
+  const okN = ents.length - unav - unk;
+  const okC=getComputedStyle(document.documentElement).getPropertyValue("--ok").trim();
+  const badC=getComputedStyle(document.documentElement).getPropertyValue("--bad").trim();
+  const warnC=getComputedStyle(document.documentElement).getPropertyValue("--warn").trim();
+
+  const downByProto={}; for(const d of dead){ downByProto[d.proto.name]=(downByProto[d.proto.name]||0)+1; }
+  const dbp=Object.entries(downByProto).sort((a,b)=>b[1]-a[1]);
+  const mx=dbp[0]?.[1]||1;
+
+  const battRow = s => {
+    const v=+s.state, c = v<10?badC : v<25?warnC : okC;
+    return `<div class="bbar"><span class="nm">${h(s.attributes.friendly_name||s.entity_id)}</span>
+      <span class="tr"><span class="fl" style="width:${Math.min(v,100)}%;background:${c}"></span></span>
+      <span class="ct">${v}%</span></div>`;
+  };
+  const sect=(t,inner)=>`<div class="card" style="margin-bottom:14px"><h3>${t}</h3>${inner||'<div class="empty">Nothing here — healthy.</div>'}</div>`;
+
+  $("#main").innerHTML =
+    `<div class="cols" style="margin-bottom:14px">
+       <div class="card"><h3>${ic("pulse")} Entity health</h3>
+         <div class="donutwrap">${donut([{n:okN,color:okC},{n:unav,color:badC},{n:unk,color:warnC}])}
+           <div class="dleg">
+             <span class="k"><span class="dot" style="background:${okC}"></span>Available <b>${okN}</b></span>
+             <span class="k"><span class="dot" style="background:${badC}"></span>Unavailable <b>${unav}</b></span>
+             <span class="k"><span class="dot" style="background:${warnC}"></span>Unknown <b>${unk}</b></span>
+           </div></div></div>
+       <div class="card"><h3>${ic("chip")} Downs by protocol</h3>
+         ${dbp.length?dbp.map(([k,v])=>`<div class="bbar"><span class="nm">${h(k)}</span><span class="tr"><span class="fl" style="width:${v/mx*100}%;background:${badC}"></span></span><span class="ct">${v}</span></div>`).join(""):'<div class="empty">No devices down.</div>'}</div>
+     </div>` +
+    sect(`${ic("chip")} Devices fully down · ${dead.length} <span style="color:var(--faint);font-weight:400">(internal services excluded)</span>`,
+      dead.map(d=>`<div class="ent" data-d="${d.id}" style="cursor:pointer"><span>${h(d.name)} <span class="id">${h(d.area)}</span></span><span class="st stat-bad">unavailable</span></div>`).join("")) +
+    sect(`${ic("batt")} Batteries · ${batts.length} <span style="color:var(--faint);font-weight:400">(lowest first)</span>`,
+      batts.slice(0,18).map(battRow).join("")) +
+    sect(`${ic("ul")} Updates pending · ${up.length}`,
+      up.map(s=>`<div class="ent"><span>${h(s.attributes.friendly_name||s.entity_id)}</span><span class="st">${h(s.attributes.latest_version||"")}</span></div>`).join(""));
+  document.querySelectorAll("[data-d]").forEach(r=>r.onclick=()=>openDrawer(r.dataset.d));
+}
+
+
+/* ---------- map view (force-directed) ---------- */
+const devIssue = d => {
+  const st = d.ents.map(e=>S.states[e.entity_id]).filter(Boolean);
+  const unav = st.length>0 && st.every(s=>s.state==="unavailable"||s.state==="unknown");
+  const low = st.some(s=>s.attributes?.device_class==="battery" && !isNaN(+s.state) && +s.state<20);
+  return unav?"bad":low?"warn":null;
+};
+function buildTree(){
+  const pool = allDevices().filter(d=>S.mapSvc || d.proto.cat!=="service");
+  const byId = Object.fromEntries(pool.map(d=>[d.id,d]));
+  const kids = {};
+  for (const d of pool){ if (d.via && byId[d.via]) (kids[d.via] ||= []).push(d); }
+  const pred = d =>
+    (S.mapStatus==="all" || devIssue(d)) &&
+    (!S.mapProto || d.proto.name===S.mapProto) &&
+    (S.mapArea===null || (d.area||"")===S.mapArea);
+  const keep = d => pred(d) || (kids[d.id]||[]).some(keep);
+  const isChild = new Set(Object.values(kids).flat().map(d=>d.id));
+  const protoGroups = {};
+  for (const d of pool){
+    if (isChild.has(d.id) || !keep(d)) continue;
+    (protoGroups[d.proto.name] ||= {v:d.proto.v, devs:[]}).devs.push(d);
+  }
+  const devNode = d => ({ id:d.id, label:d.name, type:"dev", dev:d,
+    children:(kids[d.id]||[]).filter(keep).sort((a,b)=>a.name.localeCompare(b.name)).map(devNode) });
+  if (S.mapLens==="breaker" && S.wattson){
+    const groups={};
+    for (const d of pool){
+      if (isChild.has(d.id) || !keep(d)) continue;
+      const bk=S.breakerOf[d.id];
+      (groups[bk?("b"+bk.slot):"un"] ||= {bk:bk||null, devs:[]}).devs.push(d);
+    }
+    const statusV = s => s==="confirmed"?"--ok":s==="guess"?"--warn":"--svc";
+    return { id:"_root", label:S.wattson.panel?.name||"Panel", type:"root", children:
+      Object.entries(groups).sort((a,b)=>(a[1].bk?a[1].bk.slot:999)-(b[1].bk?b[1].bk.slot:999)).map(([k,g])=>({
+        id:"_b_"+k, label:g.bk?`#${g.bk.slot}${g.bk.label?" · "+g.bk.label:""}`:"No breaker mapped",
+        type:"proto", v:g.bk?statusV(g.bk.status):"--other",
+        children:g.devs.map(devNode) })) };
+  }
+  return { id:"_root", label:"Home Assistant", type:"root", children:
+    Object.entries(protoGroups).sort((a,b)=>b[1].devs.length-a[1].devs.length).map(([name,g])=>({
+      id:"_p_"+name, label:name, type:"proto", v:g.v,
+      children:g.devs.map(devNode) })) };
+}
+function flatten(root){
+  const nodes=[], links=[];
+  (function walk(n,parent){
+    nodes.push(n); n.parent=parent;
+    if (parent) links.push({s:parent,t:n,
+      rest: parent.type==="root"?230 : n.children.length?125 : parent.type==="proto"?112:70});
+    if (n.children.length && !S.mapCollapsed.has(n.id)) for(const c of n.children) walk(c,n);
+  })(root,null);
+  return {nodes,links};
+}
+const hashAngle = id => { let x=0; for(const c of id) x=(x*31+c.charCodeAt(0))>>>0; return (x%3600)/3600*2*Math.PI; };
+let SIM=null, posMem={};
+try{ posMem = JSON.parse(store.get("eco_mappos")||"{}"); }catch(e){ posMem={}; }
+function nodeFill(d){
+  const issue = devIssue(d);
+  return issue==="bad" ? "var(--bad)" : issue==="warn" ? "var(--warn)" : `var(${d.proto.v})`;
+}
+function startSim(nodes, links, W, H, alphaVal){
+  const cx=W/2, cy=H/2;
+  let pi=0, protoN = nodes.filter(n=>n.type==="proto").length||1;
+  for (const n of nodes){
+    if (n.type==="root"){ n.x=cx; n.y=cy; n.fx=cx; n.fy=cy; }
+    else if (posMem[n.id]){ [n.x,n.y]=posMem[n.id]; }
+    else if (n.type==="proto"){ const a=(pi++/protoN)*2*Math.PI; n.x=cx+260*Math.cos(a); n.y=cy+260*Math.sin(a); }
+    else { const a=hashAngle(n.id); n.x=cx+(340+hashAngle(n.id+"r")*60)*Math.cos(a); n.y=cy+(340+hashAngle(n.id+"r")*60)*Math.sin(a); }
+    n.vx=0; n.vy=0;
+  }
+  return { nodes, links, alpha: alphaVal, W, H, cx, cy };
+}
+function tick(g){
+  const {nodes,links,alpha,cx,cy}=g;
+  for (let i=0;i<nodes.length;i++) for (let j=i+1;j<nodes.length;j++){
+    const a=nodes[i], b=nodes[j];
+    let dx=b.x-a.x, dy=b.y-a.y, d2=dx*dx+dy*dy;
+    if (d2<1){ dx=(Math.random()-.5); dy=(Math.random()-.5); d2=1; }
+    const rep = (a.type==="dev"?1700:5200)+(b.type==="dev"?1700:5200);
+    const f = Math.min(rep/d2, 7)*alpha;
+    const d=Math.sqrt(d2), ux=dx/d, uy=dy/d;
+    a.vx-=ux*f; a.vy-=uy*f; b.vx+=ux*f; b.vy+=uy*f;
+  }
+  for (const l of links){
+    const a=l.s,b=l.t;
+    const dx=b.x-a.x, dy=b.y-a.y, d=Math.sqrt(dx*dx+dy*dy)||1;
+    const f=(d-l.rest)*0.055*alpha, ux=dx/d, uy=dy/d;
+    a.vx+=ux*f; a.vy+=uy*f; b.vx-=ux*f; b.vy-=uy*f;
+  }
+  for (const n of nodes){
+    n.vx+=(cx-n.x)*0.001*alpha; n.vy+=(cy-n.y)*0.001*alpha;
+    n.vx*=0.55; n.vy*=0.55;
+    if (n.fx!=null){ n.x=n.fx; n.y=n.fy; n.vx=0; n.vy=0; }
+    else { n.x+=n.vx; n.y+=n.vy; }
+  }
+  g.alpha = Math.max(g.alpha*0.985, 0);
+}
+function persistPos(g){
+  const m={...posMem}; for(const n of g.nodes) if(n.type!=="root") m[n.id]=[Math.round(n.x),Math.round(n.y)];
+  posMem=m; store.set("eco_mappos", JSON.stringify(m));
+}
+/* camera */
+function applyCam(animate){
+  const gz=$("#mzoom"); if(!gz) return;
+  gz.style.transition = animate ? "transform .4s ease" : "none";
+  gz.style.transform = `translate(${MZ.x}px,${MZ.y}px) scale(${MZ.k})`;
+}
+function centerOn(n, W, H){
+  MZ.k = Math.max(MZ.k, 1.5);
+  MZ.x = W/2 - n.x*MZ.k; MZ.y = H/2 - n.y*MZ.k;
+  applyCam(true);
+}
+function setFocus(id, nodes){
+  S.mapFocus = id;
+  const within = new Set();
+  if (id){
+    const node = nodes.find(n=>n.id===id);
+    if (node){
+      (function add(n){ within.add(n.id); if(!S.mapCollapsed.has(n.id)) for(const c of n.children||[]) add(c); })(node);
+      let p=node.parent; while(p){ within.add(p.id); p=p.parent; }
+    }
+  }
+  document.querySelectorAll("#mapsvg .nd").forEach(g=>g.classList.toggle("dim", !!id && !within.has(g.dataset.n)));
+  if (SIM) SIM.links.forEach((l,i)=>{
+    const e=document.querySelectorAll("#medges .edge")[i];
+    if (e) e.classList.toggle("dim", !!id && !(within.has(l.s.id)&&within.has(l.t.id)));
+  });
+  const fx=$("#mfocusx"); if(fx) fx.style.display = id?"":"none";
+}
+function viewMap(){
+  if (SIM?.raf) cancelAnimationFrame(SIM.raf);
+  const W=1400, H=1000;
+  const root = buildTree();
+  const {nodes,links} = flatten(root);
+  const hot = !nodes.some(n=>n.type==="dev" && posMem[n.id]);
+  const alphaVal = hot ? 1 : (S._lastLens!==S.mapLens ? 0.7 : 0.12);
+  S._lastLens = S.mapLens;
+  SIM = startSim(nodes, links, W, H, alphaVal);
+  const pc = protoCounts(allDevices().filter(d=>S.mapSvc || d.proto.cat!=="service"));
+  const areaSet = [...new Set(allDevices().filter(d=>S.mapSvc||d.proto.cat!=="service").map(d=>d.area||""))].sort();
+  const circ = n => {
+    if (n.type==="root") return `<circle r="14" fill="var(--text)"/><circle r="5" fill="var(--ink)"/>`;
+    if (n.type==="proto"){
+      const tot=(function cnt(x){return x.type==="dev"?1+(x.children||[]).reduce((a,c)=>a+cnt(c),0):(x.children||[]).reduce((a,c)=>a+cnt(c),0)})(n);
+      return `<circle r="12" fill="var(${n.v})" opacity=".92"/><text class="cnt" y="3.5" text-anchor="middle" style="fill:#fff;font-weight:700">${tot}</text>`;
+    }
+    const bridge = n.children && n.children.length;
+    return `<circle r="${bridge?7.5:5.5}" fill="${nodeFill(n.dev)}" ${bridge?'stroke="var(--text)" stroke-width="1.2"':''}/>`
+      + (bridge && S.mapCollapsed.has(n.id) ? `<text class="cnt" y="-11" text-anchor="middle">+${n.children.length}</text>` : "");
+  };
+  const lbl = n => n.type==="root" ? `<text class="rl" x="0" y="-19" text-anchor="middle">${h(n.label)}</text>`
+    : n.type==="proto" ? `<text x="0" y="24" text-anchor="middle">${h(n.label)}</text>`
+    : `<text class="ll" x="10" y="3.5">${h(n.label.length>22?n.label.slice(0,21)+"…":n.label)}</text>`;
+  const tip = n => n.type==="dev"
+    ? `<title>${h(n.dev.name)}\n${h([n.dev.manufacturer,n.dev.model].filter(Boolean).join(" · "))}\n${h(n.dev.area||"no area")}</title>`
+    : `<title>${h(n.label)}</title>`;
+  $("#main").innerHTML =
+    `<div class="toolrow">
+       <button class="chip ${S.mapStatus==="all"?"on":""}" data-ms="all">All</button>
+       <button class="chip ${S.mapStatus==="bad"?"on":""}" data-ms="bad">Problems</button>
+       <select id="marea" style="padding:4px 8px;font-size:12px">
+         <option value="">Every area</option>
+         ${areaSet.map(a=>`<option value="${h(a)}" ${S.mapArea===a?"selected":""}>${a||"No area"}</option>`).join("")}
+       </select>
+       <select id="mproto" style="padding:4px 8px;font-size:12px">
+         <option value="">Every protocol</option>
+         ${pc.map(p=>`<option value="${h(p.name)}" ${S.mapProto===p.name?"selected":""}>${h(p.name)} · ${p.n}</option>`).join("")}
+       </select>
+     </div>
+     <div class="toolrow">
+       <button class="chip ${S.mapLens!=="breaker"?"on":""}" id="mlensP">${ic("chip")} Protocol</button>
+       ${S.wattson?`<button class="chip ${S.mapLens==="breaker"?"on":""}" id="mlensB">${ic("alert")} Breaker</button>`:""}
+       <button class="chip ${S.mapSvc?"on":""}" id="msvc">Internal & services</button>
+       <button class="chip" id="mexpand">Expand all</button>
+       <button class="chip" id="mshuffle">Shuffle</button>
+       <button class="chip" id="mfit">Fit</button>
+       <button class="chip on" id="mfocusx" style="display:${S.mapFocus?"":"none"}">Clear focus ${ic("close")}</button>
+       <span class="spacer"></span>
+       <span class="k"><span class="dot" style="background:var(--bad)"></span>unavailable</span>
+       <span class="k"><span class="dot" style="background:var(--warn)"></span>low battery</span>
+       <span class="k" style="border:1px solid var(--text);border-radius:50%;width:10px;height:10px"></span><span class="k">bridge · dbl-click to collapse</span>
+     </div>
+     <div id="mapwrap"><svg id="mapsvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+       <g id="mzoom">
+         <g id="medges">${links.map((l,i)=>`<path class="edge" data-e="${i}" d=""/>`).join("")}</g>
+         ${nodes.map(n=>`<g class="nd ${n.type!=="dev"?"inode":""}" data-n="${h(n.id)}">${tip(n)}${circ(n)}${lbl(n)}</g>`).join("")}
+       </g></svg></div>`;
+  applyCam(false);
+  const gEls = {}; document.querySelectorAll("#mapsvg .nd").forEach(g=>gEls[g.dataset.n]=g);
+  const eEls = document.querySelectorAll("#medges .edge");
+  const draw = () => {
+    for (const n of nodes){ const g=gEls[n.id]; if(g) g.setAttribute("transform",`translate(${n.x},${n.y})`); }
+    links.forEach((l,i)=>eEls[i].setAttribute("d",`M${l.s.x},${l.s.y} L${l.t.x},${l.t.y}`));
+  };
+  const loop = () => {
+    if (SIM.alpha>0.006){ tick(SIM); draw(); SIM.raf=requestAnimationFrame(loop); }
+    else { draw(); persistPos(SIM); SIM.raf=null; }
+  };
+  draw(); loop();
+  if (S.mapFocus) setFocus(S.mapFocus, nodes);
+  /* toolbar */
+  document.querySelectorAll("[data-ms]").forEach(c=>c.onclick=()=>{S.mapStatus=c.dataset.ms;S.mapFocus=null;render();});
+  $("#mproto").onchange=e=>{S.mapProto=e.target.value||null;S.mapFocus=null;render();};
+  $("#marea").onchange=e=>{S.mapArea=e.target.value===""?null:e.target.value; if(e.target.selectedIndex===0)S.mapArea=null; S.mapFocus=null; render();};
+  $("#mlensP").onclick=()=>{S.mapLens="proto";S.mapFocus=null;render();};
+  const lb=$("#mlensB"); if(lb) lb.onclick=()=>{S.mapLens="breaker";S.mapFocus=null;render();};
+  $("#msvc").onclick=()=>{S.mapSvc=!S.mapSvc;S.mapFocus=null;render();};
+  $("#mexpand").onclick=()=>{S.mapCollapsed.clear();render();};
+  $("#mshuffle").onclick=()=>{ posMem={}; store.set("eco_mappos","{}"); S.mapFocus=null; render(); };
+  $("#mfit").onclick=()=>{ MZ={k:1,x:0,y:0}; setFocus(null,nodes); applyCam(true); };
+  $("#mfocusx").onclick=()=>setFocus(null,nodes);
+  /* svg coordinate helper */
+  const svg=$("#mapsvg");
+  const toVB = (cx,cy)=>{ const r=svg.getBoundingClientRect();
+    const sc=Math.min(r.width/W, r.height/H), ox=(r.width-W*sc)/2, oy=(r.height-H*sc)/2;
+    return [(cx-r.left-ox)/sc, (cy-r.top-oy)/sc]; };
+  /* node drag / click / dblclick */
+  let nd=null, moved=0;
+  document.querySelectorAll("#mapsvg .nd").forEach(g=>{
+    g.onpointerdown=e=>{
+      e.stopPropagation();
+      const node=nodes.find(n=>n.id===g.dataset.n); if(!node||node.type==="root") return;
+      nd={node, sx:e.clientX, sy:e.clientY, ox:node.x, oy:node.y}; moved=0;
+      g.setPointerCapture(e.pointerId);
+    };
+    g.onpointermove=e=>{
+      if(!nd) return;
+      const r=svg.getBoundingClientRect(), sc=Math.min(r.width/W,r.height/H)*MZ.k;
+      nd.node.fx = nd.ox + (e.clientX-nd.sx)/sc;
+      nd.node.fy = nd.oy + (e.clientY-nd.sy)/sc;
+      moved += Math.abs(e.movementX)+Math.abs(e.movementY);
+      if (SIM.alpha<0.1){ SIM.alpha=0.1; if(!SIM.raf) loop(); }
+    };
+    g.onpointerup=e=>{
+      if(!nd) return;
+      const node=nd.node; node.fx=null; node.fy=null; nd=null;
+      if (moved<5){
+        if (node.type==="dev" && !(node.children&&node.children.length)) return openDrawer(node.id);
+        setFocus(node.id===S.mapFocus?null:node.id, nodes);
+        if (S.mapFocus) centerOn(node, W, H);
+      } else persistPos(SIM);
+    };
+    g.ondblclick=e=>{
+      e.stopPropagation();
+      const node=nodes.find(n=>n.id===g.dataset.n);
+      if (!node || node.type==="root" || node.type==="dev" && !(node.children&&node.children.length)) return;
+      S.mapCollapsed.has(node.id)?S.mapCollapsed.delete(node.id):S.mapCollapsed.add(node.id);
+      persistPos(SIM); render();
+    };
+  });
+  /* canvas pan + cursor-anchored zoom */
+  svg.onwheel=e=>{
+    e.preventDefault();
+    const [vx,vy]=toVB(e.clientX,e.clientY);
+    const k0=MZ.k, k1=Math.min(4,Math.max(.25, k0*(e.deltaY<0?1.13:0.885)));
+    MZ.x = vx - (vx-MZ.x)*(k1/k0);
+    MZ.y = vy - (vy-MZ.y)*(k1/k0);
+    MZ.k = k1; applyCam(false);
+  };
+  let drag=null;
+  svg.onpointerdown=e=>{ drag={x:e.clientX, y:e.clientY, ox:MZ.x, oy:MZ.y, m:0}; };
+  svg.onpointermove=e=>{
+    if(!drag||nd) return;
+    const r=svg.getBoundingClientRect(), sc=Math.min(r.width/W,r.height/H);
+    MZ.x = drag.ox + (e.clientX-drag.x)/sc;
+    MZ.y = drag.oy + (e.clientY-drag.y)/sc;
+    drag.m += Math.abs(e.movementX)+Math.abs(e.movementY);
+    applyCam(false);
+  };
+  svg.onpointerup=()=>{ if(drag && drag.m<4 && S.mapFocus) setFocus(null,nodes); drag=null; };
+}
+
+/* ---------- drawer ---------- */
+function bindCopies(root=document){
+  root.querySelectorAll(".cpy").forEach(b=>b.onclick=e=>{ e.stopPropagation(); copyText(b.dataset.copy); });
+}
+function openDrawer(id){
+  const d = allDevices().find(x=>x.id===id); if(!d) return;
+  $("#d-name").innerHTML = h(d.name) + cpyBtn(d.name);
+  $("#d-sub").textContent=[d.manufacturer,d.model].filter(Boolean).join(" · ")||d.proto.name;
+  const COPYABLE = new Set(["MAC","IP","Name"]);
+  const bk = S.breakerOf[d.id];
+  const meta=[["Breaker", bk?`#${bk.slot}${bk.amps?" · "+bk.amps+"A":""}${bk.label?" · "+bk.label:""} (${bk.status})`:""],
+    ["Category",CATNAME[d.proto.cat]],["Protocol",d.proto.name],["Integration",d.domains.join(", ")],
+    ["Area",d.area],["MAC",d.mac],["IP",d.ip],["OS",d.os],["Firmware",d.sw],["Hardware",d.hw],["Notes",d.notes]]
+    .filter(([,v])=>v).map(([k,v])=>`<dt>${k}</dt><dd>${h(v)}${COPYABLE.has(k)?cpyBtn(v):""}</dd>`).join("");
+  const ents=d.ents.map(e=>{
+    const s=S.states[e.entity_id], st=s?s.state:"—";
+    const cls=st==="unavailable"||st==="unknown"?"stat-bad":st==="on"?"stat-on":"stat-off";
+    const u=s?.attributes?.unit_of_measurement||"";
+    return `<div class="ent"><span>${h(e.original_name||s?.attributes?.friendly_name||e.entity_id)}<br><span class="id">${h(e.entity_id)} ${cpyBtn(e.entity_id)}</span></span><span class="st ${cls}">${h(st)}${u?" "+h(u):""}</span></div>`;
+  }).join("");
+  $("#d-body").innerHTML=`<dl class="meta">${meta}</dl>` + (d.ents.length?`<div class="eyebrow">Entities · ${d.ents.length}</div>${ents}`:"");
+  $("#d-foot").innerHTML = d.manual
+    ? `<button class="btn" id="d-edit">${ic("pen")} Edit</button><button class="btn danger" id="d-del">${ic("del")} Remove</button>`
+    : `<a class="btn" href="${S.baseUrl}/config/devices/device/${d.id}" target="_blank">${ic("ext")} Open in Home Assistant</a>`;
+  if (d.manual){
+    $("#d-edit").onclick=()=>{ closeDrawer(false); openModal(d); };
+    $("#d-del").onclick=()=>{ if(confirm(`Remove "${d.name}" from the inventory?`)){ S.manual=S.manual.filter(m=>m.id!==d.id); saveManual(); closeDrawer(false); render(); } };
+  }
+  bindCopies(document.getElementById("drawer"));
+  history.pushState({view:S.view, drawer:id}, "", "#"+S.view);
+  $("#ovl").style.display="block"; $("#drawer").classList.add("open");
+}
+function closeDrawer(viaBack=true){
+  if (!$("#drawer").classList.contains("open")) return;
+  $("#ovl").style.display="none"; $("#drawer").classList.remove("open");
+  if (viaBack && history.state?.drawer) history.back();
+}
+$("#xd").innerHTML=ic("close");
+$("#xd").onclick=()=>closeDrawer(); $("#ovl").onclick=()=>closeDrawer();
+addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeDrawer(); $("#modal").style.display="none"; } });
+
+/* ---------- manual device modal ---------- */
+let editing=null;
+function openModal(d){
+  editing = d||null;
+  $("#m-title").textContent = d?"Edit device":"Add device";
+  $("#m-name").value=d?.name||""; $("#m-cat").value=d?.proto.cat||"compute";
+  $("#m-area").value=d?.area||""; $("#m-mfr").value=d?.manufacturer||"";
+  $("#m-model").value=d?.model||""; $("#m-os").value=d?.os||"";
+  $("#m-ip").value=d?.ip||""; $("#m-mac").value=d?.mac||""; $("#m-notes").value=d?.notes||"";
+  $("#modal").style.display="flex"; $("#m-name").focus();
+}
+$("#m-cancel").onclick=()=>$("#modal").style.display="none";
+$("#m-save").onclick=()=>{
+  const name=$("#m-name").value.trim(); if(!name){ $("#m-name").focus(); return; }
+  const rec = editing || { id:"man-"+Date.now() };
+  Object.assign(rec,{ name, cat:$("#m-cat").value, area:$("#m-area").value.trim(),
+    manufacturer:$("#m-mfr").value.trim(), model:$("#m-model").value.trim(),
+    os:$("#m-os").value.trim(), ip:$("#m-ip").value.trim(),
+    mac:$("#m-mac").value.trim().toLowerCase(), notes:$("#m-notes").value.trim(),
+    sw:"", hw:"", unavailable:false });
+  rec.proto={cat:rec.cat,name:"Manual",v:"--manual"}; rec.ents=[]; rec.domains=["manual"]; rec.manual=true;
+  if(!editing) S.manual.push(rec);
+  saveManual(); $("#modal").style.display="none"; render(); toast(editing?"Saved":"Device added");
+};
+
+/* ---------- theme ---------- */
+function setTheme(t){ document.documentElement.dataset.theme=t; store.set("eco_theme",t);
+  $("#themeT").innerHTML = ic("theme")+(t==="light"?"Dark":"Light"); }
+$("#themeT").onclick=()=>setTheme(document.documentElement.dataset.theme==="light"?"dark":"light");
+setTheme(store.get("eco_theme")||"light");
+
+/* ---------- boot ---------- */
+let softT;
+function refreshSoft(){ clearTimeout(softT); softT=setTimeout(()=>{
+  if ($("#drawer").classList.contains("open") || $("#modal").style.display==="flex") return;
+  if (S.view==="map" && SIM){
+    for (const n of SIM.nodes) if (n.type==="dev"){
+      const g=document.querySelector(`#mapsvg .nd[data-n="${CSS.escape(n.id)}"] circle`);
+      if (g) g.setAttribute("fill", nodeFill(n.dev));
+    }
+    return;
+  }
+  render(); },800); }
+function render(){ renderNav(); $("#main").classList.toggle("mapmode", S.view==="map"); ({overview:viewOverview,map:viewMap,network:viewNetwork,hardware:viewHardware,health:viewHealth}[S.view])(); }
+$("#search").oninput=e=>{ S.q=e.target.value; if(S.view!=="hardware"){ S.view="hardware"; } render(); $("#search").focus(); };
+
+async function boot(url, token){
+  await connect(url, token);
+  S.baseUrl = url.replace(/\/+$/,"");
+  loadManual();
+  await loadAll();
+  diffNewDevices();
+  try{
+    S.wattson = await call({type:"wattson/get"});
+    const entToDev={};
+    for (const d of S.ha) for (const e of d.ents) entToDev[e.entity_id]=d.id;
+    S.breakerOf={};
+    for (const b of Object.values(S.wattson?.breakers||{})){
+      for (const did of (b.devices||[])) S.breakerOf[did]=b;
+      for (const eid of (b.entities||[])){ const did=entToDev[eid]; if(did && !S.breakerOf[did]) S.breakerOf[did]=b; }
+    }
+  }catch(err){ S.wattson=null; S.breakerOf={}; }
+  try{
+    const ev = await call({type:"logbook/get_events", start_time:new Date(Date.now()-3600e3).toISOString()});
+    for (const e of (ev||[]).reverse()){
+      if (!e.entity_id || e.state==null) continue;
+      const dom = e.entity_id.split(".")[0];
+      if (!FEED_DOMAINS.has(dom)) continue;
+      S.feed.push({ t:(e.when>1e12?e.when:e.when*1000), eid:e.entity_id, name:e.name||e.entity_id, from:"", to:e.state });
+      if (S.feed.length>40) break;
+    }
+  }catch(err){}
+  store.set("eco_auth", JSON.stringify({url, token}));
+  $("#login").style.display="none"; $("#app").style.display="grid";
+  $("#connhost").textContent=url.replace(/^https?:\/\//,"");
+  S.view = location.hash.slice(1)||"overview";
+  if (!VIEWS.some(([k])=>k===S.view)) S.view="overview";
+  history.replaceState({view:S.view},"","#"+S.view);
+  render();
+}
+$("#go").onclick=async()=>{
+  const url=$("#li-url").value.trim()||location.origin;
+  const tok=$("#li-tok").value.trim();
+  $("#lerr").style.display="none";
+  try{ await boot(url,tok); }
+  catch(e){ $("#lerr").textContent=e.message; $("#lerr").style.display="block"; }
+};
+(()=>{
+  if (location.origin.startsWith("http")) $("#li-url").value=location.origin;
+  const saved=store.get("eco_auth");
+  if(saved){ try{ const {url,token}=JSON.parse(saved); boot(url,token).catch(()=>{}); }catch(e){} }
+})();
+</script>
+</body>
+</html>
